@@ -1,14 +1,15 @@
 import pandas as pd
 
+# Load datasets
 logistics_df = pd.read_csv("raw_datasets/logistics_dataset_with_maintenance_required.csv")
 maintenance_df = pd.read_csv("raw_datasets/vehicle_maintenance_data.csv")
 
 
+# Filter datasets trucks and vans
 
 maintenance_filtered = maintenance_df[maintenance_df["Vehicle_Model"].isin(["Truck", "Van"])].copy()
 
-
-
+# Convert boolean-like columns to numeric flags
 def to_bool(s):
     return s.astype(str).str.lower().map({
         "yes": 1,
@@ -19,12 +20,13 @@ def to_bool(s):
         "0": 0
     })
 
+# Create binary flags for maintenance and accident history
 maintenance_filtered["need_maint_flag"] = to_bool(maintenance_filtered["Need_Maintenance"])
 maintenance_filtered["accident_flag"] = to_bool(maintenance_filtered["Accident_History"])
 
 
 
-
+# Convert numeric columns to appropriate types, coercing errors to NaN
 numeric_cols = [
     "Mileage",
     "Vehicle_Age",
@@ -40,7 +42,7 @@ for col in numeric_cols:
     )
 
 
-
+# Aggregate maintenance data by Vehicle_Model to compute average metrics and rates
 agg = maintenance_filtered.groupby("Vehicle_Model").agg(
     avg_mileage=("Mileage", "mean"),
     avg_vehicle_age=("Vehicle_Age", "mean"),
@@ -53,11 +55,11 @@ agg = maintenance_filtered.groupby("Vehicle_Model").agg(
 ).reset_index()
 
 
-
+# Rename Vehicle_Model to Vehicle_Type for merging
 agg.rename(columns={"Vehicle_Model": "Vehicle_Type"}, inplace=True)
 
 
-
+# Merge the aggregated maintenance data with the logistics dataset on Vehicle_Type
 unified_df = logistics_df.merge(
     agg,
     on="Vehicle_Type",
@@ -65,5 +67,5 @@ unified_df = logistics_df.merge(
 )
 
 
-
+# Save the unified dataset to a new CSV file
 unified_df.to_csv("unified_dataset/predictix_unified_pdm_dataset.csv", index=False)
